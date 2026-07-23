@@ -210,9 +210,9 @@ class MovieRecommender:
         data_dir = self.download_movielens()
         movies = self.load_and_prepare_data(data_dir)
         self.build_similarity_matrix(movies)
-        self.save(config.get_model_path())
+        self.save(config.get_save_path())
         print(f"Model trained on {len(movies)} movies.")
-        print(f"Artifacts saved to {config.get_model_path()}")
+        print(f"Artifacts saved to {config.get_save_path()}")
 
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
