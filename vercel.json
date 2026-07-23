@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "movie-recommendation": {
+      "root": ".",
+      "entrypoint": "app.py",
+      "buildCommand": "python build_model.py"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "type": "service",
+        "service": "movie-recommendation"
+      }
+    }
+  ]
+}

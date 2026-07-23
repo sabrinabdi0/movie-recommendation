@@ -14,5 +14,8 @@ dependencies = [
     "requests>=2.31.0",
 ]
 
+[tool.vercel]
+entrypoint = "app.py"
+
 [tool.vercel.scripts]
 build = "python build_model.py"
