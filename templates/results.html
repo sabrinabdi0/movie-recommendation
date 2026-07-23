@@ -1,12 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Recommendations for {{ result.matched_title }}</title>
-  <link rel="stylesheet" href="/css/style.css">
-</head>
-<body>
+{% extends "base.html" %}
+
+{% block title %}Recommendations for {{ result.matched_title }}{% endblock %}
+
+{% block content %}
   <main class="container">
     <header class="hero compact">
       <a class="back-link" href="{{ url_for('index') }}">← Search again</a>
@@ -52,5 +48,4 @@
       <code class="api-url">{{ url_for('api_recommend', title=result.query, _external=True) }}</code>
     </section>
   </main>
-</body>
-</html>
+{% endblock %}
