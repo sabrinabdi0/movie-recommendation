@@ -5,12 +5,21 @@ from __future__ import annotations
 import os
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
+from whitenoise import WhiteNoise
 
 import config
 from recommender import MovieRecommender
 
-app = Flask(__name__)
+app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["SECRET_KEY"] = config.SECRET_KEY
+
+# Serve CSS/JS in production (Gunicorn/Render/Railway do not serve static files by default)
+app.wsgi_app = WhiteNoise(
+    app.wsgi_app,
+    root=os.path.join(app.root_path, "static"),
+    prefix="static/",
+    autorefresh=True,
+)
 
 recommender = MovieRecommender()
 
