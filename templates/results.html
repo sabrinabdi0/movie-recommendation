@@ -42,10 +42,5 @@
         {% endfor %}
       </ol>
     </section>
-
-    <section class="card api-card">
-      <h2>API</h2>
-      <code class="api-url">{{ url_for('api_recommend', title=result.query, _external=True) }}</code>
-    </section>
   </main>
 {% endblock %}
