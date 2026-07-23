@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import logging
 import os
+import threading
 
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from whitenoise import WhiteNoise
 
 import config
 from recommender import MovieRecommender
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = Flask(__name__, static_folder="static", static_url_path="/static")
 app.config["SECRET_KEY"] = config.SECRET_KEY
@@ -22,14 +27,26 @@ app.wsgi_app = WhiteNoise(
 )
 
 recommender = MovieRecommender()
+_model_lock = threading.Lock()
 
 
 def ensure_model_loaded() -> None:
-    if not os.path.exists(config.MODEL_PATH):
-        raise FileNotFoundError(
-            f"Model not found at {config.MODEL_PATH}. Run `python build_model.py` first."
-        )
-    recommender.load(config.MODEL_PATH)
+    """Load saved model, or build it automatically if missing (e.g. after deploy)."""
+    if recommender.movies is not None:
+        return
+
+    with _model_lock:
+        if recommender.movies is not None:
+            return
+
+        if os.path.exists(config.MODEL_PATH):
+            logger.info("Loading model from %s", config.MODEL_PATH)
+            recommender.load(config.MODEL_PATH)
+            return
+
+        logger.info("Model not found — building automatically at %s", config.MODEL_PATH)
+        os.makedirs(config.ARTIFACTS_DIR, exist_ok=True)
+        recommender.train()
 
 
 @app.before_request
@@ -75,12 +92,6 @@ def api_recommend():
         )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 404
-
-
-@app.errorhandler(FileNotFoundError)
-def missing_model(error):
-    message = str(error)
-    return render_template("index.html", error=message), 503
 
 
 if __name__ == "__main__":

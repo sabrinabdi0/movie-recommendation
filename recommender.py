@@ -197,7 +197,7 @@ class MovieRecommender:
 
         vectorizer = TfidfVectorizer(stop_words="english", min_df=1, ngram_range=(1, 2))
         tfidf_matrix = vectorizer.fit_transform(movies["features"])
-        similarity = cosine_similarity(tfidf_matrix)
+        similarity = cosine_similarity(tfidf_matrix).astype(np.float32)
 
         self.vectorizer = vectorizer
         self.movies = movies
