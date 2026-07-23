@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recommendations for {{ result.matched_title }}</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header class="hero compact">
+      <a class="back-link" href="{{ url_for('index') }}">← Search again</a>
+      <p class="eyebrow">Recommendations</p>
+      <h1>Because you liked <span class="accent">{{ result.matched_title }}</span></h1>
+      {% if result.note %}
+      <p class="subtitle note">{{ result.note }}</p>
+      {% else %}
+      <p class="subtitle">Match confidence: {{ '%.0f'|format(result.match_score) }}%</p>
+      {% endif %}
+    </header>
+
+    <section class="card">
+      <ol class="movie-list">
+        {% for movie in result.recommendations %}
+        <li class="movie-item">
+          <div class="movie-rank">{{ loop.index }}</div>
+          <div class="movie-body">
+            <div class="movie-title-row">
+              <h2>{{ movie.title }}</h2>
+              {% if movie.year %}
+              <span class="year">{{ movie.year }}</span>
+              {% endif %}
+            </div>
+            <p class="genres">{{ movie.genres.replace('|', ' · ') }}</p>
+            <div class="meta-row">
+              <span class="badge">★ {{ '%.2f'|format(movie.avg_rating) }}</span>
+              <span class="badge muted">{{ movie.rating_count }} ratings</span>
+              <span class="badge similarity">{{ movie.similarity }}% similar</span>
+            </div>
+          </div>
+          <form action="{{ url_for('recommend_page') }}" method="post" class="inline-form">
+            <input type="hidden" name="title" value="{{ movie.title }}">
+            <button type="submit" class="ghost-button">Explore</button>
+          </form>
+        </li>
+        {% endfor %}
+      </ol>
+    </section>
+
+    <section class="card api-card">
+      <h2>API</h2>
+      <code class="api-url">{{ url_for('api_recommend', title=result.query, _external=True) }}</code>
+    </section>
+  </main>
+</body>
+</html>

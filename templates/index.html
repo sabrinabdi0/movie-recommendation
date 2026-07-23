@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Movie Recommender</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <p class="eyebrow">Final Project · Content-Based Filtering</p>
+      <h1>Movie Recommendation System</h1>
+      <p class="subtitle">
+        Enter a movie you love and discover similar titles powered by genres,
+        tags, ratings, and TF-IDF cosine similarity on the MovieLens dataset.
+      </p>
+    </header>
+
+    {% if error %}
+    <div class="alert alert-error" role="alert">{{ error }}</div>
+    {% endif %}
+
+    <section class="card search-card">
+      <form action="{{ url_for('recommend_page') }}" method="post" class="search-form">
+        <label for="title">Movie title</label>
+        <div class="input-row">
+          <input
+            id="title"
+            name="title"
+            type="text"
+            placeholder="Try Avatar, Inception, or Toy Story"
+            value="{{ title or '' }}"
+            required
+            autofocus
+          >
+          <button type="submit">Get Recommendations</button>
+        </div>
+      </form>
+      <p class="hint">Fuzzy matching handles typos and partial titles.</p>
+    </section>
+
+    <section class="card demo-card">
+      <h2>Demo suggestions</h2>
+      <div class="chip-row">
+        {% for demo in ['Avatar', 'Inception', 'The Matrix', 'Toy Story', 'Interstellar'] %}
+        <a class="chip" href="{{ url_for('recommend_page', title=demo) }}">{{ demo }}</a>
+        {% endfor %}
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>Built with Python · Pandas · Scikit-learn · Flask · MovieLens</p>
+    </footer>
+  </main>
+</body>
+</html>
