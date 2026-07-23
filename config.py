@@ -22,11 +22,33 @@ PORT = int(os.environ.get("FLASK_PORT", "5002"))
 DEBUG = os.environ.get("FLASK_DEBUG", "true").lower() in {"1", "true", "yes"}
 SECRET_KEY = os.environ.get("SECRET_KEY", "dev-movie-recommender-key")
 
-# Data & model paths
+# Bundled paths (created during Vercel/Render build — readable on /var/task)
+BUNDLED_DATA_DIR = os.path.join(BASE_DIR, "data")
+BUNDLED_RAW_DATA_DIR = os.path.join(BUNDLED_DATA_DIR, "raw")
+BUNDLED_ARTIFACTS_DIR = os.path.join(BASE_DIR, "artifacts")
+BUNDLED_MODEL_PATH = os.path.join(BUNDLED_ARTIFACTS_DIR, "recommender.joblib")
+
+# Writable runtime paths (local dev or serverless fallback)
 DATA_DIR = os.path.join(RUNTIME_ROOT, "data")
 RAW_DATA_DIR = os.path.join(DATA_DIR, "raw")
 ARTIFACTS_DIR = os.path.join(RUNTIME_ROOT, "artifacts")
 MODEL_PATH = os.path.join(ARTIFACTS_DIR, "recommender.joblib")
+
+
+def get_model_path() -> str:
+    """Prefer bundled model from deploy build; fall back to writable runtime path."""
+    if os.path.exists(BUNDLED_MODEL_PATH):
+        return BUNDLED_MODEL_PATH
+    return MODEL_PATH
+
+
+def get_save_path() -> str:
+    """Save into the project bundle when the filesystem is writable (Vercel build)."""
+    if os.access(BASE_DIR, os.W_OK):
+        os.makedirs(BUNDLED_ARTIFACTS_DIR, exist_ok=True)
+        return BUNDLED_MODEL_PATH
+    os.makedirs(ARTIFACTS_DIR, exist_ok=True)
+    return MODEL_PATH
 
 # MovieLens download
 MOVIELENS_URL = "https://files.grouplens.org/datasets/movielens/ml-latest-small.zip"

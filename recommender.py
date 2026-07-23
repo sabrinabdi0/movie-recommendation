@@ -82,7 +82,8 @@ class MovieRecommender:
 
     def __init__(self) -> None:
         self.movies: pd.DataFrame | None = None
-        self.similarity_matrix: np.ndarray | None = None
+        self.tfidf_matrix = None
+        self.similarity_matrix: np.ndarray | None = None  # legacy full matrix
         self.title_choices: list[str] = []
 
     # ------------------------------------------------------------------
@@ -190,44 +191,60 @@ class MovieRecommender:
         rating_bucket = "highly rated blockbuster" if row["avg_rating"] >= 4.0 else "well rated"
         return f"{title} {genres} {tags} {year} {rating_bucket}"
 
-    def build_similarity_matrix(self, movies: pd.DataFrame) -> np.ndarray:
-        """Create TF-IDF vectors and cosine similarity matrix."""
+    def build_similarity_matrix(self, movies: pd.DataFrame) -> None:
+        """Create TF-IDF vectors used for on-demand similarity scoring."""
         movies = movies.copy()
         movies["features"] = movies.apply(self._build_feature_text, axis=1)
 
         vectorizer = TfidfVectorizer(stop_words="english", min_df=1, ngram_range=(1, 2))
         tfidf_matrix = vectorizer.fit_transform(movies["features"])
-        similarity = cosine_similarity(tfidf_matrix).astype(np.float32)
 
         self.vectorizer = vectorizer
         self.movies = movies
-        self.similarity_matrix = similarity
+        self.tfidf_matrix = tfidf_matrix
+        self.similarity_matrix = None
         self.title_choices = movies["clean_title"].tolist()
-        return similarity
 
     def train(self) -> None:
         """End-to-end training pipeline: download, prepare, build, save."""
         data_dir = self.download_movielens()
         movies = self.load_and_prepare_data(data_dir)
         self.build_similarity_matrix(movies)
-        self.save(config.MODEL_PATH)
+        self.save(config.get_model_path())
         print(f"Model trained on {len(movies)} movies.")
-        print(f"Artifacts saved to {config.MODEL_PATH}")
+        print(f"Artifacts saved to {config.get_model_path()}")
 
     def save(self, path: str) -> None:
         os.makedirs(os.path.dirname(path), exist_ok=True)
         payload = {
             "movies": self.movies,
-            "similarity_matrix": self.similarity_matrix,
+            "tfidf_matrix": self.tfidf_matrix,
             "title_choices": self.title_choices,
         }
-        joblib.dump(payload, path)
+        joblib.dump(payload, path, compress=3)
 
     def load(self, path: str) -> None:
         payload = joblib.load(path)
         self.movies = payload["movies"]
-        self.similarity_matrix = payload["similarity_matrix"]
         self.title_choices = payload["title_choices"]
+        # New compact format (Vercel-friendly)
+        if "tfidf_matrix" in payload:
+            self.tfidf_matrix = payload["tfidf_matrix"]
+            self.similarity_matrix = None
+        else:
+            # Backward compatibility with older saved models
+            self.similarity_matrix = payload["similarity_matrix"]
+            self.tfidf_matrix = None
+
+    def _similarity_scores_for_index(self, idx: int) -> list[tuple[int, float]]:
+        if self.similarity_matrix is not None:
+            return list(enumerate(self.similarity_matrix[idx]))
+
+        if self.tfidf_matrix is None:
+            raise RuntimeError("Model not loaded. Run build_model.py first.")
+
+        similarities = cosine_similarity(self.tfidf_matrix[idx], self.tfidf_matrix).flatten()
+        return list(enumerate(similarities))
 
     # ------------------------------------------------------------------
     # Inference
@@ -258,14 +275,14 @@ class MovieRecommender:
         return movie_id, matched_title, float(score)
 
     def recommend(self, title: str, top_n: int | None = None) -> RecommendationResult:
-        if self.movies is None or self.similarity_matrix is None:
+        if self.movies is None or (self.tfidf_matrix is None and self.similarity_matrix is None):
             raise RuntimeError("Model not loaded. Run build_model.py first.")
 
         top_n = top_n or config.TOP_N_RECOMMENDATIONS
         movie_id, matched_title, score = self.find_best_match(title)
 
         idx = self.movies.index[self.movies["movieId"] == movie_id][0]
-        scores = list(enumerate(self.similarity_matrix[idx]))
+        scores = self._similarity_scores_for_index(idx)
         scores.sort(key=lambda item: item[1], reverse=True)
 
         note = None

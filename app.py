@@ -39,9 +39,10 @@ def ensure_model_loaded() -> None:
         if recommender.movies is not None:
             return
 
-        if os.path.exists(config.MODEL_PATH):
-            logger.info("Loading model from %s", config.MODEL_PATH)
-            recommender.load(config.MODEL_PATH)
+        if os.path.exists(config.get_model_path()):
+            model_path = config.get_model_path()
+            logger.info("Loading model from %s", model_path)
+            recommender.load(model_path)
             return
 
         logger.info("Model not found — building automatically at %s", config.MODEL_PATH)
